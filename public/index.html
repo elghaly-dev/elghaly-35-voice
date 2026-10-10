@@ -587,6 +587,116 @@
       footer a:hover {
         color: var(--text-soft);
       }
+      .check-panel h2 {
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-size: 26px;
+        font-weight: 500;
+        margin: 0 0 10px;
+      }
+      .check-panel textarea {
+        display: block;
+        width: 100%;
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        font: inherit;
+        font-size: 16px;
+        line-height: 1.5;
+        resize: vertical;
+      }
+      .check-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 12px 0 0;
+      }
+      .check-actions button {
+        min-height: 48px;
+        font-size: 15px;
+      }
+      .check-result {
+        margin-top: 18px;
+      }
+      .check-result[hidden] {
+        display: none;
+      }
+      .verdict {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.25);
+      }
+      .verdict .badge {
+        flex: 0 0 auto;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: #3a3448;
+        color: #e4dcf2;
+      }
+      .verdict[data-status="known-malicious"] { border-color: rgba(230, 110, 110, 0.6); }
+      .verdict[data-status="known-malicious"] .badge { background: #8f2f3a; color: #fff; }
+      .verdict[data-status="suspicious"] { border-color: rgba(230, 180, 90, 0.6); }
+      .verdict[data-status="suspicious"] .badge { background: #f0b85a; color: #241a06; }
+      .verdict[data-status="stop"] { border-color: rgba(230, 110, 110, 0.6); }
+      .verdict[data-status="stop"] .badge { background: #c24a4a; color: #fff; }
+      .verdict .headline {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.45;
+      }
+      .findings {
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .finding {
+        padding: 14px 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-soft);
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .f-title {
+        margin: 0 0 8px;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .f-row {
+        margin: 6px 0 0;
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--text-soft);
+        overflow-wrap: anywhere;
+      }
+      .f-row .k {
+        display: block;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .f-row ol {
+        margin: 4px 0 0;
+        padding-left: 20px;
+      }
+      .check-result .why,
+      .check-result .foot {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 12px 0 0;
+      }
       .checks {
         display: flex;
         flex-wrap: wrap;
@@ -760,6 +870,23 @@
         </div>
       </header>
 
+      <section class="panel check-panel" id="check" aria-labelledby="check-title">
+        <h2 id="check-title">Check this message or link</h2>
+        <p class="links-intro">
+          Paste a message you received, or a link. Iris checks it here in your
+          browser against fixed scam patterns. Nothing is sent, links are never
+          opened, and no wallet can connect.
+        </p>
+        <label class="sr-only" for="check-input">Message or link to check</label>
+        <textarea id="check-input" rows="5" maxlength="5000" placeholder="Paste the message or link here" spellcheck="false"></textarea>
+        <div class="check-actions">
+          <button id="check-run" class="primary" type="button">Check</button>
+          <button id="check-example" type="button">Try an example</button>
+          <button id="check-clear" type="button">Clear</button>
+        </div>
+        <div id="check-result" class="check-result" aria-live="polite" hidden></div>
+      </section>
+
       <section class="links-section panel" aria-label="Desk links">
         <div class="links-header">
           <h2 id="links-title">Where Iris can point you</h2>
@@ -897,5 +1024,6 @@
     </div>
 
     <script src="app.js" type="module"></script>
+    <script src="checker.js" type="module"></script>
   </body>
 </html>
