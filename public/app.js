@@ -3,6 +3,9 @@
 // Flow: session-config + voice-token from server → WebSocket → PCM mic up, audio down.
 // Client tool show_link highlights a desk link card and returns its URL.
 
+import { checkText, hostsIn, looksLikeSeedPhrase, STATUS } from "./iris-rules.js";
+import { runCheck } from "./checker.js";
+
 const SAMPLE_RATE = 24_000;
 const WS_URL = "wss://agents.assemblyai.com/v1/ws";
 
@@ -109,16 +112,21 @@ const TEXT_TOPICS = [
 const SECRET_WORDS = /\b(seed phrase|seedphrase|recovery (?:phrase|words)|secret phrase|mnemonic|private key)\b/;
 const ADVICE = /\b(should i (?:buy|sell)|price|invest|pump|moon|good time to)\b/;
 
-/** Twelve or more short lowercase words with no punctuation reads like recovery words. */
-function looksLikeWordList(text) {
-  const words = text.trim().split(/\s+/);
-  return words.length >= 12 && words.every((w) => /^[a-z]{3,8}$/.test(w));
+
+function toChecker(raw, check) {
+  const label = { [STATUS.KNOWN]: "Known malicious", [STATUS.SUSPICIOUS]: "Suspicious", [STATUS.UNKNOWN]: "Unknown" }[check.status];
+  const top = check.findings.find((f) => f.status === check.status) ?? check.findings[0];
+  return {
+    reply: `That looks like a message or link to check. I put it in the checker at the top: ${label}${top ? ` (${top.title})` : ""}. The evidence and next step are there.`,
+    topic: null,
+    check: raw,
+  };
 }
 
 export function answerText(raw) {
   const text = String(raw || "").trim().toLowerCase();
   if (!text) return null;
-  if (looksLikeWordList(text)) {
+  if (looksLikeSeedPhrase(text)) {
     return {
       reply:
         "That looks like it could be a list of recovery words. Delete it and do not paste it anywhere. Text mode keeps everything on this page.",
@@ -126,6 +134,10 @@ export function answerText(raw) {
       redact: true,
     };
   }
+  // A pasted message (long text or anything with a link) goes to the checker first.
+  const pasted = raw.trim().length > 80 || hostsIn(raw).length > 0;
+  const check = checkText(raw);
+  if ((pasted && check.status !== STATUS.UNKNOWN) || hostsIn(raw).length) return toChecker(raw, check);
   if (SECRET_WORDS.test(text)) {
     return {
       reply:
@@ -133,6 +145,7 @@ export function answerText(raw) {
       topic: "phone_check",
     };
   }
+  if (check.status !== STATUS.UNKNOWN) return toChecker(raw, check);
   if (ADVICE.test(text)) {
     return {
       reply: "Iris does not give financial advice or price predictions. It helps you check a phone, read a transaction, or reach support.",
@@ -162,6 +175,10 @@ function handleTextSubmit(evt) {
   addBubble("user", out.redact ? "[removed: looked like recovery words]" : value.trim(), "text mode");
   addBubble("agent", out.reply, "text mode · fixed rules, nothing sent");
   if (out.topic) highlightCard(out.topic);
+  if (out.check) {
+    runCheck(out.check);
+    document.getElementById("check").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   els.textInput.value = "";
 }
 

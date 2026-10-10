@@ -1,0 +1,33 @@
+{
+  "about": "Synthetic messages written for this test sheet. No real people, chats or victims. Hosts are invented except the three marked reported, which come from the reported-host list.",
+  "written": "2026-10-10",
+  "cases": [
+    { "id": "S01", "kind": "scam", "note": "fake airdrop + brand/lure host", "text": "Congrats! Your wallet was selected for the SOL airdrop. Claim your 250 SOL allocation before it expires: phantom-claim-drop.xyz" },
+    { "id": "S02", "kind": "scam", "note": "fake support asks for recovery words", "text": "Hi, this is the Phantom support team. To restore access please reply with your 12 word recovery phrase." },
+    { "id": "S03", "kind": "scam", "note": "validate or be deactivated", "text": "Your wallet will be deactivated within 24 hours. Validate your wallet now at walletsync-node.app to avoid losing funds." },
+    { "id": "S04", "kind": "scam", "note": "doubling giveaway", "text": "Giveaway! Send 2 SOL to the address below and receive 4 SOL back instantly." },
+    { "id": "S05", "kind": "scam", "note": "punycode lookalike (Cyrillic a)", "text": "The new Phantom version is out, update here: https://xn--phntom-4nf.app/download" },
+    { "id": "S06", "kind": "scam", "note": "reported host", "text": "Your rewards are waiting. Log in at phanton[.]app before Friday." },
+    { "id": "S07", "kind": "scam", "note": "QR code to scan with a wallet", "text": "Scan this QR code with your wallet app to receive your bonus." },
+    { "id": "S08", "kind": "scam", "note": "unlimited approval", "text": "To join the pool, approve unlimited spending for your tokens on the next screen." },
+    { "id": "S09", "kind": "scam", "note": "urgent verify link", "text": "URGENT: your account has not been verified and will be suspended. Click here to verify your wallet: secure-wallet-check.com" },
+    { "id": "S10", "kind": "scam", "note": "fake help desk + connect to fix", "text": "Hello, I'm from the Solflare help desk. Which wallet are you using? Connect your wallet here so we can fix the issue." },
+
+    { "id": "N01", "kind": "normal", "note": "advice, negated", "text": "Reminder: never share your seed phrase with anyone, not even someone who says they are support." },
+    { "id": "N02", "kind": "normal", "note": "friend asks to borrow SOL", "text": "Can you send me 0.5 SOL for dinner tonight? I'll pay you back tomorrow." },
+    { "id": "N03", "kind": "normal", "note": "official domain", "text": "The Jupiter team posted the new fee schedule on jup.ag/blog" },
+    { "id": "N04", "kind": "normal", "note": "everyday message", "text": "Meeting moved to 3pm, see you at the office." },
+    { "id": "N05", "kind": "normal", "note": "price chatter", "text": "I bought a little SOL today, the price went up a bit." },
+    { "id": "N06", "kind": "normal", "note": "advice about connecting", "text": "Tip: check the address bar before you connect your wallet to any site." },
+    { "id": "N07", "kind": "normal", "note": "advice, negated", "text": "Do not reply with your recovery phrase to anyone who messages you first." },
+    { "id": "N08", "kind": "normal", "note": "community event", "text": "Our community AMA starts at 18:00 UTC; questions welcome in the thread." },
+    { "id": "N09", "kind": "normal", "note": "ordinary link", "text": "Here is the receipt for the coffee order: https://example.com/receipt/123" },
+    { "id": "N10", "kind": "normal", "note": "official docs link", "text": "The docs at https://solana.com/docs explain how transactions are signed." },
+
+    { "id": "U01", "kind": "uncertain", "note": "short link, destination hidden", "text": "Check out this article bit.ly/3abcXYZ" },
+    { "id": "U02", "kind": "uncertain", "note": "wallet question alone", "text": "Hey, which wallet are you using these days?" },
+    { "id": "U03", "kind": "uncertain", "note": "token sale pitch, no link", "text": "New token sale next week, early spots open, message me for details." },
+    { "id": "U04", "kind": "uncertain", "note": "lure word in host", "text": "Please sign the message on claim-portal.app to finish your registration." },
+    { "id": "U05", "kind": "uncertain", "note": "authority change that may be legitimate governance", "text": "After the vote, the program will change the mint authority to the new multisig." }
+  ]
+}

@@ -24,6 +24,22 @@ Visitors click **Connect & talk** and ask questions out loud. Iris answers in a 
 - **Hard refusals (locked in `system-prompt.txt`)** — never asks for or accepts seed phrases, private keys, passwords or API keys; no financial advice; no promises of outcomes; no payments. Redirects to [support@elghaly.dev](mailto:support@elghaly.dev).
 - Mute mic, reconnect, clear transcript and a voice picker.
 
+## Check a message or link
+
+The first panel on the page takes a pasted message or link and checks it in the browser. Nothing is sent, links are shown as defanged text (`example[.]com`) and never opened, and there is no wallet connect.
+
+- **Rules:** a port of the deterministic checks in [iris-alexa](https://github.com/elghaly-dev/iris-alexa) at commit `75479b3` (same owner, MIT): the nine message rules (seed request, validate/sync wallet, fake airdrop, doubling giveaway, fake support, QR connect, unlimited approval, urgent verify link, authority change) and the link checks (reported hosts, punycode, lookalike names, brand plus lure word, short links). See `public/iris-rules.js`.
+- **Result:** a status, the reason, the evidence (the words or host that matched) and the next step.
+- **Statuses:** `known-malicious` (the exact host is on the reported list), `suspicious` (a message or link pattern matched) or `unknown` (nothing matched). There is no "safe" status: an unknown result says so in words.
+- **Recovery words:** if the box holds 12 or 24 words from the BIP-39 list, the page says **Stop**, clears the box and does not analyse it.
+- **Text mode:** a pasted message or link typed into text mode is sent to the same checker.
+
+### Fixture sheet
+
+`fixtures/check-fixtures.json` holds 25 synthetic messages: 10 scam, 10 normal or advice, 5 uncertain. `npm run fixtures` writes the results to [`docs/FIXTURES.md`](docs/FIXTURES.md), and `npm test` fails if that file is out of date.
+
+Current results: scam **10/10 detected, 0 missed**; normal and advice **1 false positive out of 10** (N02, a friend asking to borrow 0.5 SOL, matches the doubling-giveaway rule); the 5 uncertain cases are reported, not scored. The fixtures were not tuned to the rules, and the false positive stays in the sheet.
+
 ## Privacy: what happens to your voice
 
 Before the mic turns on, the page says: **"Your speech is sent to AssemblyAI for transcription. Never speak a seed phrase or private key."** That is literal. Microphone audio streams to AssemblyAI as you speak. The refusal rules above are instructions to the model; they act after your words have already been sent. There is no local filter that blocks spoken secrets.
@@ -115,8 +131,14 @@ Follows the [AssemblyAI Voice Agent tutorial](https://www.assemblyai.com/blog/bu
 ├── fly.toml               # Fly.io config
 ├── public/
 │   ├── index.html         # Iris-branded UI + link cards
-│   ├── app.js             # Voice Agent WebSocket client + tools
+│   ├── app.js             # Voice Agent WebSocket client + tools + text mode
+│   ├── checker.js         # "Check this message or link" panel
+│   ├── iris-rules.js      # Deterministic message and link rules (from iris-alexa)
+│   ├── bip39-english.js   # BIP-39 word list, to spot pasted recovery words
 │   └── pcm-processor.js   # AudioWorklet PCM encoder
+├── fixtures/              # Synthetic checker fixtures (10 scam, 10 normal, 5 uncertain)
+├── scripts/run-fixtures.mjs  # Writes docs/FIXTURES.md
+├── test/                  # node --test (server + rules)
 ├── .env.example           # ASSEMBLYAI_API_KEY= (+ optional PORT)
 └── package.json
 ```
