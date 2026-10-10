@@ -21,10 +21,159 @@ const els = {
   linksTitle: document.getElementById("links-title"),
   linksIntro: document.getElementById("links-intro"),
   supportLink: document.getElementById("support-link"),
+  chkServer: document.getElementById("chk-server"),
+  chkVoice: document.getElementById("chk-voice"),
+  consent: document.getElementById("consent"),
+  consentOk: document.getElementById("consent-ok"),
+  consentText: document.getElementById("consent-text-mode"),
+  progress: document.getElementById("progress"),
+  textMode: document.getElementById("text-mode"),
+  textForm: document.getElementById("text-form"),
+  textInput: document.getElementById("text-input"),
+  textAlert: document.getElementById("text-alert"),
 };
+
+// ---------- Server and voice checks (separate from the voice session) ----------
+
+let health = null; // last /api/health body, or null if unreachable
+let micConsent = false; // the AssemblyAI notice was accepted on this page load
+
+function setCheck(el, state, text) {
+  el.dataset.state = state;
+  el.textContent = text;
+}
+
+async function checkHealth() {
+  setCheck(els.chkServer, "", "Server: checking…");
+  setCheck(els.chkVoice, "", "Voice: checking…");
+  // Free hosting can take 30–60 s to wake up; say so instead of looking stuck.
+  const slow = setTimeout(() => setCheck(els.chkServer, "warn", "Server: waking up…"), 4000);
+  try {
+    const res = await fetch("/api/health", { cache: "no-store", signal: AbortSignal.timeout(75_000) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    health = await res.json();
+    setCheck(els.chkServer, "ok", "Server: OK");
+    if (health.voice === "not_configured") {
+      setCheck(els.chkVoice, "bad", "Voice: not set up here");
+      showTextFallback("Voice is not set up on this server right now. Text mode below works.");
+    } else {
+      // Configured is not the same as working: the token step proves the account.
+      setCheck(els.chkVoice, "ok", "Voice: ready to connect");
+    }
+  } catch (err) {
+    health = null;
+    setCheck(els.chkServer, "bad", "Server: not reachable");
+    setCheck(els.chkVoice, "bad", "Voice: unavailable");
+    showTextFallback("The server did not answer. The cards above and text mode still work.");
+  } finally {
+    clearTimeout(slow);
+  }
+}
+
+// ---------- Connection progress ----------
+
+function resetProgress() {
+  els.progress.hidden = false;
+  els.progress.querySelectorAll("li").forEach((li) => {
+    li.dataset.state = "";
+  });
+}
+
+function step(name, state) {
+  const li = els.progress.querySelector(`[data-step="${name}"]`);
+  if (li) li.dataset.state = state;
+}
+
+// ---------- Text fallback ----------
+
+function showTextFallback(reason) {
+  if (reason) {
+    els.textAlert.hidden = false;
+    els.textAlert.textContent = reason;
+  }
+}
+
+function openTextMode(reason) {
+  showTextFallback(reason);
+  els.textMode.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => els.textInput.focus({ preventScroll: true }), 350);
+}
+
+const TEXT_TOPICS = [
+  { id: "support", re: /\b(human|person|someone real|support|email|contact|talk to (?:a|someone))\b/ },
+  { id: "chain_read", re: /\b(transaction|signature|signed|sign(?:ing)?|approv\w*|txid|tx hash|hash|explorer|what did i)\b/ },
+  { id: "phone_check", re: /\b(phone|iphone|android|hack\w*|compromis\w*|malware|virus|spy\w*|stolen|drained)\b/ },
+  { id: "iris_page", re: /\b(iris|language|languages|offline|arabic|russian|chinese|german|spanish)\b/ },
+];
+
+const SECRET_WORDS = /\b(seed phrase|seedphrase|recovery (?:phrase|words)|secret phrase|mnemonic|private key)\b/;
+const ADVICE = /\b(should i (?:buy|sell)|price|invest|pump|moon|good time to)\b/;
+
+/** Twelve or more short lowercase words with no punctuation reads like recovery words. */
+function looksLikeWordList(text) {
+  const words = text.trim().split(/\s+/);
+  return words.length >= 12 && words.every((w) => /^[a-z]{3,8}$/.test(w));
+}
+
+export function answerText(raw) {
+  const text = String(raw || "").trim().toLowerCase();
+  if (!text) return null;
+  if (looksLikeWordList(text)) {
+    return {
+      reply:
+        "That looks like it could be a list of recovery words. Delete it and do not paste it anywhere. Text mode keeps everything on this page.",
+      topic: null,
+      redact: true,
+    };
+  }
+  if (SECRET_WORDS.test(text)) {
+    return {
+      reply:
+        "Never share a seed phrase or private key with anyone, including Iris. Anyone who asks for one is trying to take the wallet. The phone check is highlighted, and support@elghaly.dev reaches a person.",
+      topic: "phone_check",
+    };
+  }
+  if (ADVICE.test(text)) {
+    return {
+      reply: "Iris does not give financial advice or price predictions. It helps you check a phone, read a transaction, or reach support.",
+      topic: null,
+    };
+  }
+  for (const t of TEXT_TOPICS) {
+    if (t.re.test(text)) {
+      const link = linksById[t.id];
+      return {
+        reply: link ? `${link.summary} I've highlighted "${link.name}" above.` : "I've highlighted the matching card above.",
+        topic: t.id,
+      };
+    }
+  }
+  return {
+    reply: "In text mode I can point you to the phone check, the chain read, the Iris page, or human support. Which do you need?",
+    topic: null,
+  };
+}
+
+function handleTextSubmit(evt) {
+  evt.preventDefault();
+  const value = els.textInput.value;
+  const out = answerText(value);
+  if (!out) return;
+  addBubble("user", out.redact ? "[removed: looked like recovery words]" : value.trim(), "text mode");
+  addBubble("agent", out.reply, "text mode · fixed rules, nothing sent");
+  if (out.topic) highlightCard(out.topic);
+  els.textInput.value = "";
+}
 
 let sessionConfig = null;
 let linksById = {};
+for (const card of document.querySelectorAll(".link-card")) {
+  linksById[card.dataset.topic] = {
+    id: card.dataset.topic,
+    name: card.querySelector(".link-name")?.textContent ?? "",
+    summary: card.querySelector(".summary")?.textContent ?? "",
+  };
+}
 let ws = null;
 let audioCtx = null;
 let micStream = null;
@@ -89,6 +238,7 @@ let isConnected = false;
 let pendingToolResults = [];
 let lastEventType = null;
 let highlightTimer = null;
+let sessionReady = false;
 
 function setStatus(state, text) {
   els.statusDot.className = "dot " + state;
@@ -281,11 +431,13 @@ async function connect() {
   const unsupported = micSupportError();
   if (unsupported) {
     setStatus("error", unsupported);
+    openTextMode(unsupported + ". Text mode below works.");
     return;
   }
 
   els.connect.disabled = true;
   setTalkState("connecting");
+  resetProgress();
 
   // Create and resume the AudioContext synchronously inside the tap/click handler.
   // iOS Safari (and some Android browsers) keep a context created after an await
@@ -295,29 +447,48 @@ async function connect() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume().catch(() => {});
 
-  setStatus("connecting", "Loading desk policy…");
+  step("server", "active");
+  if (!health) await checkHealth();
+  if (!health) {
+    step("server", "failed");
+    setStatus("error", "Server not reachable");
+    failConnect("The server did not answer, so voice can't start. Text mode below works.");
+    return;
+  }
+  step("server", "done");
 
+  setStatus("connecting", "Loading desk policy…");
+  step("config", "active");
   try {
     sessionConfig = await fetchSessionConfig();
     renderLinkCards(sessionConfig.desk);
   } catch (err) {
     console.error(err);
+    step("config", "failed");
     setStatus("error", "Config error");
-    failConnect();
+    failConnect("The desk policy did not load, so voice can't start. Text mode below works.");
     return;
   }
+  step("config", "done");
 
   setStatus("connecting", "Requesting token…");
-
+  step("token", "active");
   let token;
   try {
     token = await fetchToken();
   } catch (err) {
     console.error(err);
-    setStatus("error", "Token error");
-    failConnect();
+    step("token", "failed");
+    setStatus("error", "Voice unavailable");
+    failConnect(
+      health?.voice === "not_configured"
+        ? "Voice is not set up on this server right now. Text mode below works."
+        : "The voice service did not give a token just now. Text mode below works.",
+    );
     return;
   }
+  step("token", "done");
+  step("mic", "active");
 
   playbackTime = audioCtx.currentTime;
   scheduledSources = [];
@@ -335,12 +506,15 @@ async function connect() {
     });
   } catch (err) {
     console.error("Mic permission denied:", err);
+    step("mic", "failed");
     setStatus("error", "Mic blocked — allow microphone and retry");
-    failConnect();
+    failConnect("The microphone is blocked. Allow it in the browser settings, or use text mode below.");
     return;
   }
+  step("mic", "done");
 
   setMuted(false);
+  step("audio", "active");
 
   try {
     await audioCtx.audioWorklet.addModule("pcm-processor.js");
@@ -349,12 +523,15 @@ async function connect() {
     await audioCtx.resume();
   } catch (err) {
     console.error("Audio setup failed:", err);
+    step("audio", "failed");
     setStatus("error", "Audio setup failed");
-    failConnect();
+    failConnect("Audio could not start on this device. Text mode below works.");
     return;
   }
+  step("audio", "done");
 
   setStatus("connecting", "Connecting…");
+  step("session", "active");
   ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
   ws.binaryType = "arraybuffer";
 
@@ -386,9 +563,16 @@ async function connect() {
   ws.onclose = (evt) => {
     console.log("WebSocket closed:", evt.code, evt.reason);
     if (ws !== thisWs) return; // a newer session already replaced this one
+    const wasReady = sessionReady;
     teardown(false);
     if (sawError || evt.code !== 1000) {
       setStatus("error", "Disconnected (" + evt.code + (evt.reason ? ": " + evt.reason : "") + ")");
+      if (!wasReady) step("session", "failed");
+      openTextMode(
+        wasReady
+          ? "The voice session dropped. Tap the button to try again, or use text mode below."
+          : "The voice session did not open. Text mode below works.",
+      );
     }
   };
 
@@ -404,6 +588,8 @@ function handleEvent(event) {
 
   switch (event.type) {
     case "session.ready":
+      sessionReady = true;
+      step("session", "done");
       setStatus("connected", "Connected");
       updateConnectionControls(true);
       micSource.connect(workletNode);
@@ -533,7 +719,8 @@ function flushPlayback() {
   if (audioCtx) playbackTime = audioCtx.currentTime;
 }
 
-function failConnect() {
+function failConnect(reason) {
+  if (reason) openTextMode(reason);
   try {
     micStream && micStream.getTracks().forEach((t) => t.stop());
   } catch (_) {}
@@ -569,6 +756,7 @@ function teardown(resetReconnect = true) {
   startedReplies = new Set();
   pendingToolResults = [];
   lastEventType = null;
+  sessionReady = false;
   isMuted = false;
   els.mute.textContent = "Mute mic";
   els.mute.classList.remove("active");
@@ -619,9 +807,31 @@ document.addEventListener("visibilitychange", () => {
 // One big toggle: tap to start (connect() runs synchronously inside the tap, so the
 // AudioContext is still created in the user gesture), tap again to stop.
 els.connect.addEventListener("click", () => {
-  if (isConnected) disconnect();
-  else connect();
+  if (isConnected) {
+    disconnect();
+    return;
+  }
+  // Show the AssemblyAI notice before the mic turns on, once per page load.
+  if (!micConsent) {
+    els.consent.hidden = false;
+    els.consent.scrollIntoView({ behavior: "smooth", block: "center" });
+    els.consentOk.focus({ preventScroll: true });
+    return;
+  }
+  connect();
 });
+// connect() still runs inside this tap, so the AudioContext starts in a user gesture.
+els.consentOk.addEventListener("click", () => {
+  micConsent = true;
+  els.consent.hidden = true;
+  connect();
+});
+els.consentText.addEventListener("click", () => {
+  els.consent.hidden = true;
+  openTextMode();
+});
+els.textForm.addEventListener("submit", handleTextSubmit);
+checkHealth();
 els.disconnect.addEventListener("click", disconnect);
 els.reconnect.addEventListener("click", reconnect);
 els.mute.addEventListener("click", () => setMuted(!isMuted));

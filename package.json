@@ -1,15 +1,16 @@
 {
   "name": "iris-desk-voice",
   "version": "1.0.0",
-  "description": "Iris Desk Voice — real-time voice agent for 35 / Iris visitors (AssemblyAI Voice Agent API).",
+  "description": "Iris Desk Voice \u2014 real-time voice agent for 35 / Iris visitors (AssemblyAI Voice Agent API).",
   "type": "module",
   "main": "server.js",
   "license": "MIT",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

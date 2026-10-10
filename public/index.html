@@ -182,6 +182,14 @@
         grid-template-columns: 1fr 1fr;
         gap: 20px;
       }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
       label {
         display: block;
         font-size: 11px;
@@ -579,6 +587,126 @@
       footer a:hover {
         color: var(--text-soft);
       }
+      .checks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .chk {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border-soft);
+        background: var(--panel);
+      }
+      .chk[data-state="ok"] { color: #bfe3cf; border-color: rgba(120, 200, 160, 0.35); }
+      .chk[data-state="warn"] { color: #e3d6a8; border-color: rgba(220, 200, 140, 0.35); }
+      .chk[data-state="bad"] { color: #e9b4b4; border-color: rgba(196, 112, 112, 0.4); }
+      .demo-link {
+        display: inline-block;
+        margin-top: 10px;
+        color: var(--accent);
+        font-size: 14px;
+      }
+      .mic-notice {
+        margin: 0 0 14px;
+        padding: 12px 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(220, 200, 140, 0.35);
+        background: rgba(60, 50, 20, 0.35);
+        color: #efe3bd;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .consent {
+        margin: 0 0 16px;
+        padding: 18px;
+        border-radius: var(--radius);
+        border: 1px solid rgba(220, 200, 140, 0.5);
+        background: rgba(40, 32, 14, 0.85);
+      }
+      .consent p {
+        margin: 0 0 14px;
+        font-size: 16px;
+        line-height: 1.55;
+        color: #f4ead0;
+      }
+      .consent .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .consent button {
+        min-height: 48px;
+        font-size: 15px;
+      }
+      .progress {
+        list-style: none;
+        margin: 0 0 16px;
+        padding: 14px 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-soft);
+        background: rgba(0, 0, 0, 0.22);
+        font-size: 13px;
+        display: grid;
+        gap: 6px;
+      }
+      .progress[hidden] {
+        display: none;
+      }
+      .progress li::before {
+        content: "○";
+        display: inline-block;
+        width: 1.4em;
+        color: var(--muted);
+      }
+      .progress li[data-state="active"]::before { content: "◌"; color: var(--accent); }
+      .progress li[data-state="done"]::before { content: "✓"; color: #9fd8b8; }
+      .progress li[data-state="failed"]::before { content: "✕"; color: #e39a9a; }
+      .progress li[data-state="failed"] { color: #e9b4b4; }
+      .text-mode {
+        margin: 0 0 20px;
+        padding: 18px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .text-mode h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .text-mode .note {
+        margin: 0 0 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .text-mode .alert {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: #efe3bd;
+      }
+      .text-form {
+        display: flex;
+        gap: 8px;
+      }
+      .text-form input {
+        flex: 1;
+        min-width: 0;
+        min-height: 48px;
+        padding: 0 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        font: inherit;
+        font-size: 16px;
+      }
+      .text-form button {
+        min-height: 48px;
+      }
       @media (max-width: 640px) {
         .app {
           padding: 36px 20px 56px;
@@ -618,10 +746,17 @@
             >
             by elghaly, built on the AssemblyAI Voice Agent API.
           </p>
+          <a class="demo-link" href="#demo">▶ Watch the recorded demo</a>
         </div>
-        <div class="status">
-          <span id="status-dot" class="dot"></span>
-          <span id="status-text">Disconnected</span>
+        <div>
+          <div class="status">
+            <span id="status-dot" class="dot"></span>
+            <span id="status-text">Disconnected</span>
+          </div>
+          <div class="checks" aria-live="polite">
+            <span class="chk" id="chk-server" data-state="">Server: checking…</span>
+            <span class="chk" id="chk-voice" data-state="">Voice: checking…</span>
+          </div>
         </div>
       </header>
 
@@ -633,7 +768,7 @@
             the card so you can open it yourself.
           </p>
         </div>
-        <div id="links-grid" class="links-grid"></div>
+        <div id="links-grid" class="links-grid"><!--DESK_CARDS--></div>
       </section>
 
       <section class="voice-section panel">
@@ -662,6 +797,31 @@
           </div>
         </div>
 
+        <p class="mic-notice" id="mic-notice">
+          <strong>Before you talk:</strong> your speech is sent to AssemblyAI for
+          transcription. Never speak a seed phrase or private key.
+        </p>
+
+        <div id="consent" class="consent" role="dialog" aria-labelledby="consent-text" hidden>
+          <p id="consent-text">
+            Your speech is sent to AssemblyAI for transcription. Never speak a
+            seed phrase or private key.
+          </p>
+          <div class="row">
+            <button id="consent-ok" class="primary" type="button">Turn on the mic</button>
+            <button id="consent-text-mode" type="button">Type instead</button>
+          </div>
+        </div>
+
+        <ol id="progress" class="progress" aria-label="Voice connection steps" hidden>
+          <li data-step="server">Server reachable</li>
+          <li data-step="config">Desk policy loaded</li>
+          <li data-step="token">Voice token issued</li>
+          <li data-step="mic">Microphone allowed</li>
+          <li data-step="audio">Audio engine started</li>
+          <li data-step="session">Voice session open</li>
+        </ol>
+
         <button id="connect" class="talk-btn" type="button" data-state="idle" aria-pressed="false">
           <span class="talk-icon" aria-hidden="true">🎙️</span>
           <span class="talk-text">
@@ -683,7 +843,21 @@
           <button id="clear">Clear transcript</button>
         </div>
 
-        <div class="demo-video">
+        <div id="text-mode" class="text-mode">
+          <h3>Type instead</h3>
+          <p class="note">
+            Text mode answers from fixed rules in this page. What you type here is
+            not sent anywhere. Never type a seed phrase or private key.
+          </p>
+          <p id="text-alert" class="alert" hidden></p>
+          <form id="text-form" class="text-form" autocomplete="off">
+            <label class="sr-only" for="text-input">Your question</label>
+            <input id="text-input" maxlength="300" placeholder="Ask about the phone check, a transaction, or help" enterkeyhint="send" />
+            <button type="submit" class="primary">Send</button>
+          </form>
+        </div>
+
+        <div class="demo-video" id="demo">
           <video
             controls
             playsinline
@@ -697,7 +871,8 @@
             <a href="/demo.mp4">Download the demo (MP4)</a>.
           </video>
           <p class="demo-caption">
-            Demo video · <a href="/demo.mp4" target="_blank" rel="noopener">open /demo.mp4</a>
+            Recorded demo of the voice desk ·
+            <a href="/demo.mp4" target="_blank" rel="noopener">open /demo.mp4</a>
           </p>
         </div>
 
