@@ -24,6 +24,22 @@ Visitors click **Connect & talk** and ask questions out loud. Iris answers in a 
 - **Hard refusals (locked in `system-prompt.txt`)** — never asks for or accepts seed phrases, private keys, passwords or API keys; no financial advice; no promises of outcomes; no payments. Redirects to [support@elghaly.dev](mailto:support@elghaly.dev).
 - Mute mic, reconnect, clear transcript and a voice picker.
 
+## Privacy: what happens to your voice
+
+Before the mic turns on, the page says: **"Your speech is sent to AssemblyAI for transcription. Never speak a seed phrase or private key."** That is literal. Microphone audio streams to AssemblyAI as you speak. The refusal rules above are instructions to the model; they act after your words have already been sent. There is no local filter that blocks spoken secrets.
+
+Text mode is different: it answers from fixed rules inside the page, and what you type there is not sent anywhere.
+
+## When voice is not available
+
+The page works without voice:
+
+- The link cards are rendered into the page by the server, so they show before any script runs.
+- The header shows two separate checks: **Server** (`/api/health`) and **Voice**. `/api/health` reports whether a voice key is configured; it never calls AssemblyAI, so "configured" is not proof the voice account works. The token step is.
+- While connecting, a step list shows server, desk policy, voice token, microphone, audio engine and voice session. If any step fails, **Type instead** opens with the reason.
+- Without `ASSEMBLYAI_API_KEY` the server still starts: `/api/voice-token` answers 503 and the page stays in text mode.
+- The recorded demo is linked at the top of the page (`/demo.mp4`).
+
 No wallets, seeds or keys in this repo — voice agent and public links.
 
 ---
@@ -113,7 +129,7 @@ Follows the [AssemblyAI Voice Agent tutorial](https://www.assemblyai.com/blog/bu
 - [x] Uses **AssemblyAI Voice Agent API** (token + WebSocket streaming + client tool)
 - [x] `npm start` works after `cp .env.example .env` + valid API key
 - [x] **DEMO.md** — 60s judge script
-- [x] **GET /api/health** → `{ "ok": true, "links": 4 }`
+- [x] **GET /api/health** → `{ "ok": true, "links": 4, "voice": "configured" }` (or `"not_configured"`)
 - [x] No secrets committed — `.env.example` has an empty key placeholder
 - [x] MIT license
 - [x] Live URL — https://iris-desk-voice.onrender.com
@@ -156,7 +172,7 @@ Serve over HTTPS for mic access on non-localhost origins.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `ASSEMBLYAI_API_KEY` | Yes | AssemblyAI key, kept on the server and used to issue short-lived browser tokens |
+| `ASSEMBLYAI_API_KEY` | For voice | AssemblyAI key, kept on the server and used to issue short-lived browser tokens. Without it the page runs in text mode. |
 | `PORT` | No | HTTP port (default `3000`) |
 
 ---

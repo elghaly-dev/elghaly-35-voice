@@ -1,33 +1,29 @@
 // Iris Desk Voice — lightweight Node server.
 //
-// 1. Serves static frontend in /public.
+// 1. Serves the page in /public. The desk link cards are rendered into index.html on the
+//    server, so they show before any script or API call runs.
 // 2. Issues single-use AssemblyAI tokens at GET /api/voice-token (key stays server-side).
+//    Without ASSEMBLYAI_API_KEY the server still runs: the token route answers 503 and
+//    the page switches to text mode.
 // 3. Serves locked session config + desk link catalog at GET /api/session-config.
-// 4. Health check at GET /api/health.
+// 4. Health check at GET /api/health. It reports whether a voice key is configured but
+//    never calls AssemblyAI, so a healthy answer is not proof the voice account works.
 
 import express from "express";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import "dotenv/config";
 
-const API_KEY = process.env.ASSEMBLYAI_API_KEY;
-if (!API_KEY) {
-  console.error(
-    "Missing ASSEMBLYAI_API_KEY. Copy .env.example to .env and add your AssemblyAI key.",
-  );
-  process.exit(1);
-}
-
-const PORT = process.env.PORT || 3000;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOKEN_TTL_SECONDS = 300;
 
 const GREETING =
   "Hello. I'm Iris Desk Voice, the front desk for the Iris page. I can explain the phone check, help you read what a transaction signed, or point you to support. How may I help?";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const SYSTEM_PROMPT = readFileSync(join(__dirname, "system-prompt.txt"), "utf8").trim();
 const DESK_CONFIG = JSON.parse(readFileSync(join(__dirname, "desk.json"), "utf8"));
+const INDEX_TEMPLATE = readFileSync(join(__dirname, "public", "index.html"), "utf8");
 
 const SHOW_LINK_TOOL = {
   type: "function",
@@ -50,63 +46,121 @@ const SHOW_LINK_TOOL = {
   timeout_seconds: 30,
 };
 
-const app = express();
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
 
-// express.static (send) sets Content-Type from the extension (.mp4 -> video/mp4) and
-// answers Range requests with 206, which iPhone Safari needs for <video>.
-app.use(
-  express.static(join(__dirname, "public"), {
-    setHeaders(res, path) {
-      if (path.endsWith(".mp4")) {
-        res.setHeader("Content-Type", "video/mp4");
-        res.setHeader("Accept-Ranges", "bytes");
-        res.setHeader("Cache-Control", "public, max-age=86400");
-      }
-    },
-  }),
-);
+// Same markup as renderLinkCards() in public/app.js.
+export function renderDeskCards(desk = DESK_CONFIG) {
+  return desk.links
+    .map((link) => {
+      const external = link.url.startsWith("mailto:") ? "" : ' target="_blank" rel="noopener noreferrer"';
+      return (
+        `<article class="link-card" id="link-${escapeHtml(link.id)}" data-topic="${escapeHtml(link.id)}">` +
+        `<h3 class="link-name">${escapeHtml(link.name)}</h3>` +
+        `<p class="summary">${escapeHtml(link.summary)}</p>` +
+        `<a class="open-btn" href="${escapeHtml(link.url)}"${external}>${escapeHtml(link.label || "Open")}</a>` +
+        `</article>`
+      );
+    })
+    .join("\n");
+}
 
-// Browsers still probe /favicon.ico; point them at the SVG icon instead of a 404.
-app.get("/favicon.ico", (_req, res) => res.redirect(301, "/favicon.svg"));
+export function createApp({ apiKey = process.env.ASSEMBLYAI_API_KEY, fetchImpl = globalThis.fetch } = {}) {
+  const voiceConfigured = Boolean(apiKey && apiKey.trim());
+  const indexHtml = INDEX_TEMPLATE.replace("<!--DESK_CARDS-->", renderDeskCards());
 
-const health = (_req, res) => {
-  res.json({ ok: true, links: DESK_CONFIG.links.length });
-};
-app.get("/api/health", health);
-app.get("/health", health);
+  const app = express();
 
-app.get("/api/session-config", (_req, res) => {
-  res.json({
-    system_prompt: SYSTEM_PROMPT,
-    greeting: GREETING,
-    desk: DESK_CONFIG,
-    tools: [SHOW_LINK_TOOL],
-  });
-});
+  const sendIndex = (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache");
+    res.send(indexHtml);
+  };
+  app.get("/", sendIndex);
+  app.get("/index.html", sendIndex);
 
-app.get("/api/voice-token", async (_req, res) => {
-  try {
-    const url = new URL("https://agents.assemblyai.com/v1/token");
-    url.searchParams.set("expires_in_seconds", String(TOKEN_TTL_SECONDS));
+  // express.static (send) sets Content-Type from the extension (.mp4 -> video/mp4) and
+  // answers Range requests with 206, which iPhone Safari needs for <video>.
+  app.use(
+    express.static(join(__dirname, "public"), {
+      index: false,
+      setHeaders(res, path) {
+        if (path.endsWith(".mp4")) {
+          res.setHeader("Content-Type", "video/mp4");
+          res.setHeader("Accept-Ranges", "bytes");
+          res.setHeader("Cache-Control", "public, max-age=86400");
+        }
+      },
+    }),
+  );
 
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${API_KEY}` },
+  // Browsers still probe /favicon.ico; point them at the SVG icon instead of a 404.
+  app.get("/favicon.ico", (_req, res) => res.redirect(301, "/favicon.svg"));
+
+  const health = (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      links: DESK_CONFIG.links.length,
+      voice: voiceConfigured ? "configured" : "not_configured",
     });
+  };
+  app.get("/api/health", health);
+  app.get("/health", health);
 
-    if (!response.ok) {
-      const body = await response.text();
-      console.error(`Token request failed: ${response.status} ${body}`);
-      return res.status(502).json({ error: "Failed to get token" });
+  app.get("/api/session-config", (_req, res) => {
+    res.json({
+      system_prompt: SYSTEM_PROMPT,
+      greeting: GREETING,
+      desk: DESK_CONFIG,
+      tools: [SHOW_LINK_TOOL],
+    });
+  });
+
+  app.get("/api/voice-token", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (!voiceConfigured) {
+      return res.status(503).json({
+        error: "voice_unavailable",
+        message: "Voice is not configured on this server. Text mode still works.",
+      });
     }
+    try {
+      const url = new URL("https://agents.assemblyai.com/v1/token");
+      url.searchParams.set("expires_in_seconds", String(TOKEN_TTL_SECONDS));
 
-    const { token } = await response.json();
-    res.json({ token, expires_in_seconds: TOKEN_TTL_SECONDS });
-  } catch (err) {
-    console.error("Token request error:", err);
-    res.status(500).json({ error: "Internal error" });
+      const response = await fetchImpl(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      if (!response.ok) {
+        console.error(`Token request failed: HTTP ${response.status}`);
+        return res.status(502).json({ error: "token_failed", message: "The voice service did not issue a token." });
+      }
+
+      const { token } = await response.json();
+      res.json({ token, expires_in_seconds: TOKEN_TTL_SECONDS });
+    } catch (err) {
+      console.error("Token request error:", err?.name ?? "error");
+      res.status(502).json({ error: "token_failed", message: "The voice service could not be reached." });
+    }
+  });
+
+  return { app, voiceConfigured };
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const PORT = process.env.PORT || 3000;
+  const { app, voiceConfigured } = createApp();
+  if (!voiceConfigured) {
+    console.warn("ASSEMBLYAI_API_KEY is not set: serving the page in text mode only (voice token returns 503).");
   }
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Iris Desk Voice running at http://localhost:${PORT}`);
-});
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Iris Desk Voice running at http://localhost:${PORT}`);
+  });
+}
