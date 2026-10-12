@@ -4,13 +4,18 @@
 
 # Iris Desk Voice
 
-Real-time voice front desk for the [Iris page](https://iris-35.elghaly.dev/), built on the **AssemblyAI Voice Agent API**. Built for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon) — LabLab team **[elghaly-35-voice](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon/elghaly-35-voice)**.
+**Colosseum entry (Solana).** Iris helps people understand suspicious wallet messages and decide what to do next, without connecting a wallet.
 
-**Live demo:** https://iris-desk-voice.onrender.com (Render free plan; the first load after idle can take ~30–60 s)
+- **Try it:** https://iris-desk-voice.onrender.com (Render free plan; the first load after idle can take ~30–60 s). Health: `/api/health`.
+- **Pitch script:** [`docs/PITCH.md`](docs/PITCH.md) · **Demo script:** [`docs/DEMO-COLOSSEUM.md`](docs/DEMO-COLOSSEUM.md)
+- **What is new for Colosseum (from 2026-10-10):** [`CHANGELOG.md`](CHANGELOG.md)
+- **Companions:** [iris-mobile](https://github.com/Alarm2024/iris-mobile) (Android voice app, devnet by default) and [iris-alexa](https://github.com/elghaly-dev/iris-alexa) (read-only safety triage over MCP).
 
-**Demo video:** https://iris-desk-voice.onrender.com/demo.mp4 (also embedded on the app page, plays on iPhone)
+This repo started as a real-time voice front desk for the [Iris page](https://iris-35.elghaly.dev/), built on the **AssemblyAI Voice Agent API** for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon) on LabLab (September 2026, team **[elghaly-35-voice](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon/elghaly-35-voice)**). The CHANGELOG keeps that work apart from the Colosseum work.
 
-**Deadline:** Sep 30, 2026 · **Public byline:** Wyndham Heaven / elghaly
+**Demo video (voice desk, LabLab):** https://iris-desk-voice.onrender.com/demo.mp4 (also embedded on the app page, plays on iPhone)
+
+**Public byline:** Wyndham Heaven / elghaly
 
 ---
 
@@ -71,7 +76,7 @@ No wallets, seeds or keys in this repo — voice agent and public links.
 ### Run locally
 
 ```bash
-git clone https://github.com/Alarm2024/elghaly-35-voice.git
+git clone https://github.com/elghaly-dev/elghaly-35-voice.git
 cd elghaly-35-voice
 npm install
 cp .env.example .env
