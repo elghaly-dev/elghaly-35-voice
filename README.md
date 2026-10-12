@@ -17,6 +17,23 @@ This repo started as a real-time voice front desk for the [Iris page](https://ir
 
 **Public byline:** Wyndham Heaven / elghaly
 
+## Component map (Colosseum)
+
+Only work from **2026-10-10** onward is new for Colosseum; see [`CHANGELOG.md`](CHANGELOG.md). Prior LabLab voice desk and companion repos are disclosed, not claimed as new.
+
+| Component | Purpose | Depends on | Companion repo (pinned `main`) | Built in contest window | Run / test |
+| --- | --- | --- | --- | --- | --- |
+| **Paste checker** (`public/checker.js`, `public/iris-rules.js`) | Triage a message or link in-browser; no network, no wallet | Rule definitions from [iris-alexa](https://github.com/elghaly-dev/iris-alexa) at `75479b395ce4525130245ce8a7ee8ea120807a82` | iris-alexa `dbeaa07481713e587160dabf75c380e5ca8dcd0b` | Yes — panel, fixtures, BIP-39 guard ([#7](https://github.com/elghaly-dev/elghaly-35-voice/pull/7)) | `npm test` · `npm run fixtures` |
+| **Judge path UI** (`public/index.html`, `public/app.js`, `server.js`) | Cards first, Server/Voice checks, mic notice, text mode fallback | Node 18+, optional `ASSEMBLYAI_API_KEY` | — (this repo) | Yes ([#6](https://github.com/elghaly-dev/elghaly-35-voice/pull/6)) | `npm start` → open `/` · `npm test` |
+| **Voice desk** (`system-prompt.txt`, `desk.json`, AssemblyAI WS) | Speech-to-speech front desk; `show_link` highlights cards | AssemblyAI Voice Agent API | — | Prior work (Sep 2026 LabLab); mic notice and text fallback extended in contest window | `npm start` with `.env` key · [`DEMO.md`](DEMO.md) |
+| **Deployment** (`render.yaml`, `Dockerfile`) | Public demo host | Render (or Docker) | — | Prior deploy config; health path used by judge path | `curl -s https://iris-desk-voice.onrender.com/api/health` |
+| **Android wallet voice (companion)** | Devnet voice send/receive via Mobile Wallet Adapter; user signs in wallet | Public devnet RPC | [iris-mobile](https://github.com/Alarm2024/iris-mobile) `2294aa20e16734c3d2c54ce3e2b09a3df6aa1967` | Mostly pre-window MVP; LICENSE on main in window | `npm ci && npm test` in that repo · APK [v0.1.0](https://github.com/Alarm2024/iris-mobile/releases/tag/v0.1.0) |
+| **MCP safety server (companion)** | Read-only tools: scam, link, explain tx, tips, cleanup | Public RPC optional | [iris-alexa](https://github.com/elghaly-dev/iris-alexa) `dbeaa07481713e587160dabf75c380e5ca8dcd0b` | Doc + `/sim` hardening in window; server from Sep 2026 | `npm ci && npm test` · `npm start` → **`/sim` (simulated assistant, not Alexa hardware)** |
+
+**This repo pin (main entry):** `d19a93f1f22b9be5729b9c1c6f17ea5b0741c468`
+
+Submission helpers: [`SUBMISSION.md`](SUBMISSION.md) · [`VIDEO_CHECKLIST.md`](VIDEO_CHECKLIST.md)
+
 ---
 
 ## What it does
